@@ -5,7 +5,10 @@
         <field name="name">estate.property.list</field>
         <field name="model">estate.property</field>
         <field name="arch" type="xml">
-            <list string="Estate Properties">
+            <list string="Estate Properties"
+                decoration-success="state == 'offer_received'"
+                decoration-muted="state == 'sold'"
+                decoration-bf="state == 'offer_accepted'">
                 <field name="name"/>
                 <field name="expected_price"/>
                 <field name="selling_price"/>
@@ -26,8 +29,11 @@
         <field name="arch" type="xml">
             <form string="Estate Property">
                 <header>
-                    <button name="action_sold_property" type="object" string="Sold" class="oe_highlight"/>
-                    <button name="action_cancel_property" type="object" string="Cancel" class="btn-secondary"/>
+                    <button name="action_sold_property" type="object" string="Sold" class="oe_highlight"
+                            invisible="state in ('sold', 'cancelled')"/>
+                    <button name="action_cancel_property" type="object" string="Cancel" class="btn-secondary"
+                            invisible="state in ('sold', 'cancelled')"/>
+
                 </header>
                 <sheet>
                     <group>
@@ -37,19 +43,20 @@
                             <field name="selling_price"/>
                         </group>
                         <group>
-                            <field name="state"/>
+                            <field name="state" widget="statusbar" readonly="1"/>
                             <field name="postcode"/>
                         </group>
                          <group>
                         <field name="name"/>
-                        <field name="property_type_id"/>
+                        <field name="property_type_id" options="{'no_create': True, 'no_open': True}"/>
                         <field name="buyer_id"/>
                         <field name="salesperson_id"/>
                         </group>
                         <group string="Garden Details">
                             <field name="garden"/>
-                            <field name="garden_area"/>
-                            <field name="garden_orientation"/>
+                            <field name="garden_area" invisible="not garden"/>
+                            <field name="garden_orientation" invisible="not garden"/>
+
                         </group>
                         <group>
                             <field name="living_area"/>  
@@ -59,7 +66,7 @@
                         <group>
                         <field name="name"/>
                         <field name="best_price" readonly="1"/>
-                        <field name="offer_ids" widget="one2many"/>
+                        <field name="offer_ids" widget="one2many" readonly="state in ('offer_accepted', 'sold', 'cancelled')"/>
                         </group>
                     </group>
                     <notebook>

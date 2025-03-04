@@ -5,6 +5,8 @@ from odoo.exceptions import UserError
 class EstatePropertyOffer(models.Model):
     _name = "estate.property.offer"
     _description = "Real Estate Property Offer"
+    _order = "price desc"
+
 
     price = fields.Float(required=True, string="Offer Price")
     _sql_constraints = [
@@ -17,6 +19,12 @@ class EstatePropertyOffer(models.Model):
 
     partner_id = fields.Many2one("res.partner", required=True, string="Buyer")
     property_id = fields.Many2one("estate.property", required=True, string="Property")
+    property_type_id = fields.Many2one(
+    "estate.property.type",
+    related="property_id.property_type_id",
+    store=True,
+    string="Property Type"
+    )
 
     validity = fields.Integer(string="Validity (days)", default=7)
     date_deadline = fields.Date(
@@ -55,7 +63,7 @@ class EstatePropertyOffer(models.Model):
             self.validity = (self.date_deadline - base_date).days
 
     def action_accept_offer(self):
-        """Accepts an offer, sets property as sold, and updates selling price."""
+        """Accepts an offer, sets property as offer_accepted, and updates selling price."""
         for record in self:
             if record.property_id.state == "sold":
                 raise UserError("This property is already sold!")
@@ -69,9 +77,11 @@ class EstatePropertyOffer(models.Model):
             record.property_id.write({
                 "buyer_id": record.partner_id.id,
                 "selling_price": record.price,
-                "state": "offer_accepted"
+                "state": "offer_accepted"  
             })
 
+            
+            record.property_id._compute_state()
     def action_refuse_offer(self):
         """Refuses an offer."""
         for record in self:

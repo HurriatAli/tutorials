@@ -6,6 +6,7 @@ from datetime import timedelta, date
 class EstateProperty(models.Model):
     _name = "estate.property"
     _description = "Real Estate Property"
+    _order = "id desc"
 
     name = fields.Char(required=True)
     description = fields.Text()
@@ -21,7 +22,7 @@ class EstateProperty(models.Model):
     def _check_selling_price(self):
         """Ensures selling price is at least 90% of the expected price."""
         for record in self:
-            if not float_is_zero(record.selling_price, precision_rounding=0.01):  # Ignore 0 price
+            if not float_is_zero(record.selling_price, precision_rounding=0.01):  
                 min_acceptable_price = record.expected_price * 0.90
                 if float_compare(record.selling_price, min_acceptable_price, precision_rounding=0.01) < 0:
                     raise ValidationError("The selling price cannot be lower than 90% of the expected price!")
@@ -51,7 +52,7 @@ class EstateProperty(models.Model):
          ('offer_accepted', 'Offer Accepted'),
          ('sold', 'Sold'),
          ('cancelled', 'Cancelled')],
-        required=True, copy=False, default='new'
+        required=True, copy=False, default='new' , store=True ,compute="_compute_state"
     )
 
     best_price = fields.Float(string="Best Offer", compute="_compute_best_price", store=True)
@@ -91,3 +92,12 @@ class EstateProperty(models.Model):
             if record.state == "sold":
                 raise UserError("A sold property cannot be cancelled!")
             record.state = "cancelled"
+    @api.depends("offer_ids.status")
+
+    def _compute_state(self):
+        """Automatically update property state based on offers."""
+        for record in self:
+            if any(offer.status == "accepted" for offer in record.offer_ids):
+                record.state = "offer_accepted"
+            elif record.state == "new" and record.offer_ids:
+                record.state = "offer_received"
