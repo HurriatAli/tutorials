@@ -14,6 +14,7 @@ class EstateProperty(models.Model):
     date_availability = fields.Date(copy=False, default=lambda self: date.today() + timedelta(days=90))
     expected_price = fields.Float(required=True)
     selling_price = fields.Float(readonly=True)
+    tag_ids = fields.Many2many("estate.property.tag", string="Tags")
     _sql_constraints = [
         ('check_expected_price', 'CHECK(expected_price > 0)', 'The expected price must be strictly positive!'),
         ('check_selling_price', 'CHECK(selling_price >= 0)', 'The selling price must be positive!')
@@ -54,6 +55,12 @@ class EstateProperty(models.Model):
          ('cancelled', 'Cancelled')],
         required=True, copy=False, default='new' , store=True ,compute="_compute_state"
     )
+
+    def _unlink_if_new_or_cancelled(self):
+        """Prevent deletion if the property is not 'New' or 'Cancelled'."""
+        for record in self:
+            if record.state not in ("new", "cancelled"):
+                raise UserError("You can only delete properties in the 'New' or 'Cancelled' state.")
 
     best_price = fields.Float(string="Best Offer", compute="_compute_best_price", store=True)
 

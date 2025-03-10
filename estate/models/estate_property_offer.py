@@ -7,11 +7,11 @@ class EstatePropertyOffer(models.Model):
     _description = "Real Estate Property Offer"
     _order = "price desc"
 
-
     price = fields.Float(required=True, string="Offer Price")
     _sql_constraints = [
         ('check_offer_price', 'CHECK(price > 0)', 'The offer price must be strictly positive!')
     ]
+
     status = fields.Selection([
         ("accepted", "Accepted"),
         ("refused", "Refused")
@@ -19,11 +19,13 @@ class EstatePropertyOffer(models.Model):
 
     partner_id = fields.Many2one("res.partner", required=True, string="Buyer")
     property_id = fields.Many2one("estate.property", required=True, string="Property")
+    
+    # Related field to link with property type
     property_type_id = fields.Many2one(
-    "estate.property.type",
-    related="property_id.property_type_id",
-    store=True,
-    string="Property Type"
+        "estate.property.type",
+        related="property_id.property_type_id",
+        store=True,
+        string="Property Type"
     )
 
     validity = fields.Integer(string="Validity (days)", default=7)
@@ -62,8 +64,23 @@ class EstatePropertyOffer(models.Model):
             base_date = self.create_date.date() if self.create_date else fields.Date.today()
             self.validity = (self.date_deadline - base_date).days
 
+    @api.model
+    def create(self, vals):
+        """On offer creation, update property state and ensure price is higher than existing offers."""
+        property_id = self.env["estate.property"].browse(vals["property_id"])
+        
+        #  Ensure offer is higher than existing offers
+        if property_id.offer_ids and vals["price"] <= max(property_id.offer_ids.mapped("price")):
+            raise UserError("New offer must be higher than the current best offer!")
+
+        #  Update property state to 'offer_received'
+        if property_id.state == "new":
+            property_id.state = "offer_received"
+
+        return super().create(vals)
+
     def action_accept_offer(self):
-        """Accepts an offer, sets property as offer_accepted, and updates selling price."""
+        """Accepts an offer, updates property to 'offer_accepted', and sets selling price."""
         for record in self:
             if record.property_id.state == "sold":
                 raise UserError("This property is already sold!")
@@ -77,11 +94,12 @@ class EstatePropertyOffer(models.Model):
             record.property_id.write({
                 "buyer_id": record.partner_id.id,
                 "selling_price": record.price,
-                "state": "offer_accepted"  
+                "state": "offer_accepted"
             })
-
             
+            # Update the property state
             record.property_id._compute_state()
+
     def action_refuse_offer(self):
         """Refuses an offer."""
         for record in self:

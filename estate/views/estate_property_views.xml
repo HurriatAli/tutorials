@@ -15,6 +15,7 @@
                 <field name="best_price" readonly="1"/>
                 <field name="state"/>
                 <field name="property_type_id"/>
+                  <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                 <field name="buyer_id"/>
                 <field name="salesperson_id"/>
                 <field name="living_area"/>
@@ -51,6 +52,7 @@
                         <field name="property_type_id" options="{'no_create': True, 'no_open': True}"/>
                         <field name="buyer_id"/>
                         <field name="salesperson_id"/>
+                        <field name="tag_ids" widget="many2many_tags"/>
                         </group>
                         <group string="Garden Details">
                             <field name="garden"/>
@@ -88,12 +90,14 @@
                 <field name="name"/>
                 <field name="state"/>
                 <field name="postcode"/>
+                <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                 
                 <filter string="Available" name="filter_available" 
                     domain="[('state', 'in', ['new', 'offer_received'])]"/>
                 <group string="Group By">
                     <filter string="Postcode" name="group_by_postcode" 
                         context="{'group_by': 'postcode'}"/>
+                    <filter string="Tags" name="group_by_tags" context="{'group_by': 'tag_ids'}"/>
                 </group>
             </search>
         </field>
